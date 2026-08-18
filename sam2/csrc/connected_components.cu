@@ -5,7 +5,7 @@
 // LICENSE file in the root directory of this source tree.
 
 // adapted from https://github.com/zsef123/Connected_components_PyTorch
-// with license found in the LICENSE_cctorch file in the root directory.
+// with license found in sam2/licenses/LICENSE_cctorch.
 #include <ATen/cuda/CUDAContext.h>
 #include <cuda.h>
 #include <cuda_runtime.h>

@@ -38,8 +38,7 @@ MP-SAM2/
 │   ├── infer_video.py     # automatic first-frame initialization + memory propagation
 │   └── evaluate.py        # image-level segmentation metrics
 ├── configs/               # paper hyperparameters
-├── sam2/                  # vendored SAM2 runtime (Meta, Apache-2.0)
-├── sam2_configs/          # SAM2 Hiera model configurations
+├── sam2/                  # vendored SAM2 runtime, configs, and notices
 ├── checkpoints/           # local-only checkpoints; excluded from Git
 ├── data/                  # dataset layout only; no images or videos
 └── results/               # local experiment tables; excluded from Git
@@ -224,7 +223,7 @@ then averaged, matching the image-level reporting protocol.
 
 Code is released under Apache License 2.0. The vendored SAM2 source retains
 Meta's copyright notices and license. See [`LICENSE`](LICENSE) and the
-third-party notices in [`licenses/`](licenses/).
+third-party notices in [`sam2/licenses/`](sam2/licenses/).
 
 ## Citation
 
