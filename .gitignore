@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.idea/
+.vscode/
+.DS_Store
+
+# Data and generated outputs are intentionally excluded.
+data/*
+!data/README.md
+outputs/
+runs/
+results/
+
+# Model weights are released separately, never through Git.
+checkpoints/*
+!checkpoints/README.md
+*.pt
+*.pth
+*.torch
+*.ckpt
+*.safetensors

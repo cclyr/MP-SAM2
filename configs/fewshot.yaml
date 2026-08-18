@@ -1,0 +1,19 @@
+model: sam2_hiera_l.yaml
+seed: 42
+input_size: 1024
+batch_size: 2
+epochs_equivalent: 80
+optimizer: AdamW
+learning_rate: 1.0e-5
+weight_decay: 0.01
+stage_ratio: [0.30, 0.40, 0.30]
+partial_encoder_blocks: [30, 31]
+partial_encoder_neck: true
+loss_weights:
+  bce: 1.0
+  dice: 2.0
+  focal: 1.0
+  iou: 1.5
+training_points: 64
+negative_point_ratio: 0.10
+

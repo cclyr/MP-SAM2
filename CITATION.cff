@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use MP-SAM2, please cite the associated paper."
+title: "A Multi-Prompt Transfer Learning Framework Based on Segment Anything Model 2 for Microcrack Segmentation in Engineered Cementitious Composite Images and Videos"
+type: software
+authors:
+  - family-names: Chen
+    given-names: Yanhui
+  - family-names: Wei
+    given-names: Jingjie
+  - family-names: Liu
+    given-names: Hengliang
+  - family-names: Huang
+    given-names: Jinghao
+  - family-names: Lv
+    given-names: Haojia
+  - family-names: Zhang
+    given-names: Ge
+  - family-names: Teng
+    given-names: Shuai
+  - family-names: Zang
+    given-names: Jianbo
+  - family-names: Lin
+    given-names: Jiaxiang
+  - family-names: Guo
+    given-names: Yongchang
+repository-code: "https://github.com/cclyr/MP-SAM2"
+license: Apache-2.0
+version: 1.0.0
+date-released: 2026-08-18
