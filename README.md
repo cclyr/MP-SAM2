@@ -62,7 +62,7 @@ pip install -e .
 Alternatively:
 
 ```bash
-conda env create -f environment.yml
+conda env create -f configs/environment.yml
 conda activate mp-sam2
 pip install -e .
 ```
@@ -223,11 +223,10 @@ then averaged, matching the image-level reporting protocol.
 ## License and acknowledgment
 
 Code is released under Apache License 2.0. The vendored SAM2 source retains
-Meta's copyright notices and license. See [`LICENSE`](LICENSE),
-[`NOTICE`](NOTICE), and [`LICENSE_cctorch`](LICENSE_cctorch).
+Meta's copyright notices and license. See [`LICENSE`](LICENSE) and the
+third-party notices in [`licenses/`](licenses/).
 
 ## Citation
 
 The final bibliographic record will be added after publication. Until then,
-please cite the manuscript title shown at the top of this README. A machine-
-readable citation template is provided in [`CITATION.cff`](CITATION.cff).
+please cite the manuscript title shown at the top of this README.

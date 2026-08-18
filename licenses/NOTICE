@@ -2,4 +2,3 @@ MP-SAM2 includes source files derived from Meta Platforms, Inc.'s Segment Anythi
 project. Those files retain their original copyright notices and are distributed
 under the Apache License 2.0. The optional connected-components CUDA component is
 covered by LICENSE_cctorch.
-
