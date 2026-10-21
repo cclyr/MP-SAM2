@@ -11,8 +11,8 @@ SAM2 memory propagation for video segmentation. No manual click, box, or mask is
 required at inference time.
 
 Source code, training configurations, and fine-tuned model weights are publicly
-available. Download the weights from the
-[v1.0.0 release](https://github.com/cclyr/MP-SAM2/releases/tag/v1.0.0).
+available. Download the weights from
+[Hugging Face](https://huggingface.co/ccllr/MP-SAM2).
 Image and video datasets are not included.
 
 ## Results
@@ -77,26 +77,27 @@ path for cross-platform compatibility.
 ## Checkpoints
 
 Download a fine-tuned checkpoint from
-[GitHub Releases](https://github.com/cclyr/MP-SAM2/releases/tag/v1.0.0)
+[Hugging Face](https://huggingface.co/ccllr/MP-SAM2)
 and place it in `checkpoints/`:
 
 | File | Training budget | Seed | Download |
 |---|---:|---:|---|
-| `mp_sam2_5_seed42.torch` | 5 images | 42 | [download](https://github.com/cclyr/MP-SAM2/releases/download/v1.0.0/mp_sam2_5_seed42.torch) |
-| `mp_sam2_10_seed42.torch` | 10 images | 42 | [download](https://github.com/cclyr/MP-SAM2/releases/download/v1.0.0/mp_sam2_10_seed42.torch) |
-| `mp_sam2_50_seed42.torch` | 50 images | 42 | [download](https://github.com/cclyr/MP-SAM2/releases/download/v1.0.0/mp_sam2_50_seed42.torch) |
-| `mp_sam2_full.torch` | 186 images (full data) | original run | [download](https://github.com/cclyr/MP-SAM2/releases/download/v1.0.0/mp_sam2_full.torch) |
+| `mp_sam2_5_seed42.torch` | 5 images | 42 | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_5_seed42.torch) |
+| `mp_sam2_10_seed42.torch` | 10 images | 42 | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_10_seed42.torch) |
+| `mp_sam2_50_seed42.torch` | 50 images | 42 | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_50_seed42.torch) |
+| `mp_sam2_full.torch` | 186 images (full data) | original run | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_full.torch) |
 
 Each checkpoint is approximately 898 MB and contains the complete model state.
 For the full-data checkpoint:
 
 ```bash
 curl -fL --retry 3 -o checkpoints/mp_sam2_full.torch \
-  https://github.com/cclyr/MP-SAM2/releases/download/v1.0.0/mp_sam2_full.torch
+  https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_full.torch
 ```
 
 SHA-256 checksums are provided in
-[`checkpoints/SHA256SUMS`](checkpoints/SHA256SUMS) and as a release asset.
+[`checkpoints/SHA256SUMS`](checkpoints/SHA256SUMS) and in the
+[Hugging Face model repository](https://huggingface.co/ccllr/MP-SAM2/blob/main/SHA256SUMS).
 
 The individual few-shot checkpoints use seed 42 as representative released
 models. The few-shot values reported in the paper are still three-seed means.
