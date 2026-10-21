@@ -264,21 +264,3 @@ The evaluator matches nested category paths and ignores overlay images. It also
 writes per-image metrics to a CSV next to the JSON summary. Metric values are
 fractions in `[0, 1]`; multiply by 100 to express them as percentages.
 
-## Training settings
-
-- Input image patches are resized to 1024 × 1024 by the SAM2 transform.
-- Few-shot experiments use 80 equivalent epochs and stage ratios 30%/40%/30%.
-- Optimizer: AdamW, learning rate `1e-5`, weight decay `0.01`, batch size `2`.
-
-## License and acknowledgment
-
-Code and released fine-tuned weights are distributed under Apache License 2.0.
-The vendored SAM2 source retains
-Meta's copyright notices and license. See [`LICENSE`](LICENSE) and the
-third-party notices in [`sam2/licenses/`](sam2/licenses/).
-
-## Citation
-
-Use the repository's [citation metadata](CITATION.cff) to cite this code release.
-The associated method is described in the manuscript named at the top of this
-README; an article DOI is not specified here until the final record is available.
