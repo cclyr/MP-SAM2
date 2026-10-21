@@ -269,11 +269,6 @@ fractions in `[0, 1]`; multiply by 100 to express them as percentages.
 - Input image patches are resized to 1024 × 1024 by the SAM2 transform.
 - Few-shot experiments use 80 equivalent epochs and stage ratios 30%/40%/30%.
 - Optimizer: AdamW, learning rate `1e-5`, weight decay `0.01`, batch size `2`.
-- The fixed test set is never used for subset selection or model training.
-- The release includes the method code, runtime model configurations, training
-  settings, inference/evaluation tools, and trained model weights.
-- Raw images, videos, annotations, experiment logs, intermediate checkpoints,
-  and unrelated baseline workspaces are not included.
 
 ## License and acknowledgment
 
