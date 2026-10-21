@@ -10,9 +10,10 @@ points with progressive SAM2 transfer. The same image-domain model initializes
 SAM2 memory propagation for video segmentation. No manual click, box, or mask is
 required at inference time.
 
-> Release status: the source repository is private during peer review. Image and
-> video data are not included. Model weights will be published separately after
-> acceptance; local checkpoints are intentionally ignored by Git.
+Source code, training configurations, and fine-tuned model weights are publicly
+available. Download the weights from the
+[v1.0.0 release](https://github.com/cclyr/MP-SAM2/releases/tag/v1.0.0).
+Image and video datasets are not included.
 
 ## Results
 
@@ -33,13 +34,13 @@ the mean and standard deviation across seeds 42, 123, and 2026.
 MP-SAM2/
 ├── mp_sam2/              # prompts, model loading, training, metrics, video pipeline
 ├── scripts/
-│   ├── train.py           # 5/10/50/full-data training
+│   ├── train.py           # few-shot or full-data training
 │   ├── infer_image.py     # single-image or directory inference
 │   ├── infer_video.py     # automatic first-frame initialization + memory propagation
 │   └── evaluate.py        # image-level segmentation metrics
 ├── configs/               # paper hyperparameters
 ├── sam2/                  # vendored SAM2 runtime, configs, and notices
-├── checkpoints/           # local-only checkpoints; excluded from Git
+├── checkpoints/           # weight download instructions and SHA-256 checksums
 ├── data/                  # dataset layout only; no images or videos
 └── results/               # local experiment tables; excluded from Git
 ```
@@ -50,6 +51,9 @@ The experiments were run on an NVIDIA GPU. Python 3.10 and a CUDA-enabled PyTorc
 build are recommended.
 
 ```bash
+git clone https://github.com/cclyr/MP-SAM2.git
+cd MP-SAM2
+
 conda create -n mp-sam2 python=3.10 -y
 conda activate mp-sam2
 
@@ -72,24 +76,38 @@ path for cross-platform compatibility.
 
 ## Checkpoints
 
-The local release directory contains:
+Download a fine-tuned checkpoint from
+[GitHub Releases](https://github.com/cclyr/MP-SAM2/releases/tag/v1.0.0)
+and place it in `checkpoints/`:
 
-| File | Training budget | Seed | Publication status |
+| File | Training budget | Seed | Download |
 |---|---:|---:|---|
-| `checkpoints/mp_sam2_5_seed42.torch` | 5 images | 42 | local only |
-| `checkpoints/mp_sam2_10_seed42.torch` | 10 images | 42 | local only |
-| `checkpoints/mp_sam2_50_seed42.torch` | 50 images | 42 | local only |
-| `checkpoints/mp_sam2_full.torch` | full data | original run | local only |
-| `checkpoints/sam2.1_hiera_large.pt` | Meta pretraining | n/a | local only; not redistributed |
+| `mp_sam2_5_seed42.torch` | 5 images | 42 | [download](https://github.com/cclyr/MP-SAM2/releases/download/v1.0.0/mp_sam2_5_seed42.torch) |
+| `mp_sam2_10_seed42.torch` | 10 images | 42 | [download](https://github.com/cclyr/MP-SAM2/releases/download/v1.0.0/mp_sam2_10_seed42.torch) |
+| `mp_sam2_50_seed42.torch` | 50 images | 42 | [download](https://github.com/cclyr/MP-SAM2/releases/download/v1.0.0/mp_sam2_50_seed42.torch) |
+| `mp_sam2_full.torch` | 186 images (full data) | original run | [download](https://github.com/cclyr/MP-SAM2/releases/download/v1.0.0/mp_sam2_full.torch) |
+
+Each checkpoint is approximately 898 MB and contains the complete model state.
+For the full-data checkpoint:
+
+```bash
+curl -fL --retry 3 -o checkpoints/mp_sam2_full.torch \
+  https://github.com/cclyr/MP-SAM2/releases/download/v1.0.0/mp_sam2_full.torch
+```
+
+SHA-256 checksums are provided in
+[`checkpoints/SHA256SUMS`](checkpoints/SHA256SUMS) and as a release asset.
 
 The individual few-shot checkpoints use seed 42 as representative released
 models. The few-shot values reported in the paper are still three-seed means.
 
-For a fresh clone, download the SAM2 Hiera Large base checkpoint from the official
-[Meta SAM2 repository](https://github.com/facebookresearch/sam2) and place it at:
+For training and video inference, also download the SAM2.1 Hiera Large base
+checkpoint from the official
+[Meta SAM2 repository](https://github.com/facebookresearch/sam2):
 
-```text
-checkpoints/sam2.1_hiera_large.pt
+```bash
+curl -fL --retry 3 -o checkpoints/sam2.1_hiera_large.pt \
+  https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt
 ```
 
 The fine-tuned checkpoint contains the complete model state and can be used for
@@ -221,7 +239,8 @@ then averaged, matching the image-level reporting protocol.
 
 ## License and acknowledgment
 
-Code is released under Apache License 2.0. The vendored SAM2 source retains
+Code and released fine-tuned weights are distributed under Apache License 2.0.
+The vendored SAM2 source retains
 Meta's copyright notices and license. See [`LICENSE`](LICENSE) and the
 third-party notices in [`sam2/licenses/`](sam2/licenses/).
 
