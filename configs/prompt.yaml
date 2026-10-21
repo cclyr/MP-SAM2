@@ -1,11 +1,11 @@
 threshold_offset: 0
 box_expand_ratio: 0.10
-edt_positive_points: 4
-negative_points: 2
-minimum_negative_distance: 6.0
-minimum_point_gap_ratio: 0.03
+num_positive: 4
+num_negative: 2
+min_negative_distance: 6.0
+min_gap_ratio: 0.03
 prediction_threshold: 0.5
 dynamic_mask_only: true
-hybrid_candidate_reranking: true
-sam2_score_weight: 0.5
+hybrid_rerank: true
+score_weight: 0.5
 

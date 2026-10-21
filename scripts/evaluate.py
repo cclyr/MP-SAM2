@@ -23,17 +23,25 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     rows = []
-    for prediction_path in sorted(args.predictions.glob("*.png")):
+    for prediction_path in sorted(args.predictions.rglob("*.png")):
+        if prediction_path.stem.endswith("_overlay"):
+            continue
+        relative = prediction_path.relative_to(args.predictions)
         stem = prediction_path.stem.removesuffix("_mask")
-        candidates = [args.masks / f"{stem}{args.mask_suffix}.png", args.masks / f"{stem}.png"]
+        candidates = [
+            args.masks / relative.parent / f"{stem}{args.mask_suffix}.png",
+            args.masks / relative.parent / f"{stem}.png",
+        ]
         mask_path = next((path for path in candidates if path.exists()), None)
         if mask_path is None:
             continue
         prediction = cv2.imread(str(prediction_path), cv2.IMREAD_GRAYSCALE)
         target = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+        if prediction is None or target is None:
+            raise RuntimeError(f"Unable to read prediction/mask pair: {prediction_path}, {mask_path}")
         if target.shape != prediction.shape:
             target = cv2.resize(target, (prediction.shape[1], prediction.shape[0]), interpolation=cv2.INTER_NEAREST)
-        rows.append({"image": stem, **segmentation_metrics(prediction > 0, target > 0)})
+        rows.append({"image": (relative.parent / stem).as_posix(), **segmentation_metrics(prediction > 0, target > 0)})
     if not rows:
         raise RuntimeError("No prediction/ground-truth pairs were found.")
     keys = ("accuracy", "precision", "recall", "f1", "iou", "dice")

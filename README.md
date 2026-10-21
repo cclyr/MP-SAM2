@@ -17,8 +17,9 @@ Image and video datasets are not included.
 
 ## Results
 
-All image results use the same independent 71-image test set. Few-shot values are
-the mean and standard deviation across seeds 42, 123, and 2026.
+The following reported results use the independent 71-image test set. Few-shot
+values are the mean and standard deviation over repeated training runs.
+Released files contain individual trained models.
 
 | Training images | Accuracy (%) | IoU (%) | Dice (%) |
 |---:|---:|---:|---:|
@@ -37,18 +38,19 @@ MP-SAM2/
 │   ├── train.py           # few-shot or full-data training
 │   ├── infer_image.py     # single-image or directory inference
 │   ├── infer_video.py     # automatic first-frame initialization + memory propagation
-│   └── evaluate.py        # image-level segmentation metrics
-├── configs/               # paper hyperparameters
+│   ├── evaluate.py        # image-level segmentation metrics
+│   └── download_checkpoints.py # download the released weights
+├── configs/               # YAML settings read by training/inference scripts
 ├── sam2/                  # vendored SAM2 runtime, configs, and notices
 ├── checkpoints/           # weight download instructions and SHA-256 checksums
-├── data/                  # dataset layout only; no images or videos
-└── results/               # local experiment tables; excluded from Git
+└── data/                  # dataset layout only; no images or videos
 ```
 
 ## Installation
 
 The experiments were run on an NVIDIA GPU. Python 3.10 and a CUDA-enabled PyTorch
-build are recommended.
+build are recommended. The commands below target the bundled SAM2 runtime;
+install this repository instead of installing a separate latest SAM2 package.
 
 ```bash
 git clone https://github.com/cclyr/MP-SAM2.git
@@ -80,40 +82,44 @@ Download a fine-tuned checkpoint from
 [Hugging Face](https://huggingface.co/ccllr/MP-SAM2)
 and place it in `checkpoints/`:
 
-| File | Training budget | Seed | Download |
-|---|---:|---:|---|
-| `mp_sam2_5_seed42.torch` | 5 images | 42 | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_5_seed42.torch) |
-| `mp_sam2_10_seed42.torch` | 10 images | 42 | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_10_seed42.torch) |
-| `mp_sam2_50_seed42.torch` | 50 images | 42 | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_50_seed42.torch) |
-| `mp_sam2_full.torch` | 186 images (full data) | original run | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_full.torch) |
+| File | Training budget | Download |
+|---|---:|---|
+| `mp_sam2_5.torch` | 5 images | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_5.torch) |
+| `mp_sam2_10.torch` | 10 images | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_10.torch) |
+| `mp_sam2_50.torch` | 50 images | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_50.torch) |
+| `mp_sam2_full.torch` | 186 images (full data) | [download](https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_full.torch) |
 
 Each checkpoint is approximately 898 MB and contains the complete model state.
-For the full-data checkpoint:
+For the full-data checkpoint, use the download helper:
 
 ```bash
-curl -fL --retry 3 -o checkpoints/mp_sam2_full.torch \
-  https://huggingface.co/ccllr/MP-SAM2/resolve/main/mp_sam2_full.torch
+python scripts/download_checkpoints.py --variant full
 ```
 
 SHA-256 checksums are provided in
 [`checkpoints/SHA256SUMS`](checkpoints/SHA256SUMS) and in the
 [Hugging Face model repository](https://huggingface.co/ccllr/MP-SAM2/blob/main/SHA256SUMS).
 
-The individual few-shot checkpoints use seed 42 as representative released
-models. The few-shot values reported in the paper are still three-seed means.
+Use `--variant 5`, `10`, `50`, or `all` to select the other files. Each released
+file is one trained model. The 20-image setting in the results table is supported
+by training with `--budget 20`; a 20-image checkpoint is not included.
 
 For training and video inference, also download the SAM2.1 Hiera Large base
 checkpoint from the official
 [Meta SAM2 repository](https://github.com/facebookresearch/sam2):
 
 ```bash
-curl -fL --retry 3 -o checkpoints/sam2.1_hiera_large.pt \
-  https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt
+python scripts/download_checkpoints.py --variant full --include-base
 ```
 
 The fine-tuned checkpoint contains the complete model state and can be used for
 image inference directly. Video inference also requests the base checkpoint to
 construct the SAM2 video predictor before loading the transferred state.
+
+The released MP-SAM2 models use the bundled `sam2_hiera_l.yaml` architecture.
+The training loader transfers matching tensors from SAM2.1 Hiera Large;
+SAM2.1-specific spatial and pointer-projection heads are excluded. Keep the
+bundled architecture configuration when loading these MP-SAM2 weights.
 
 ## Data layout
 
@@ -121,16 +127,21 @@ The data are not distributed in this repository. Prepare paired PNG files as:
 
 ```text
 dataset/
-├── images/
-│   ├── 01/01_01.png
-│   └── 02/02_01.png
-└── masks/
-    ├── 01/01_01_enhanced.png
-    └── 02/02_01_enhanced.png
+├── train/
+│   ├── images/01/01_01.png
+│   ├── images/02/02_01.png
+│   ├── masks/01/01_01_enhanced.png
+│   └── masks/02/02_01_enhanced.png
+└── test/
+    ├── images/11/11_01.png
+    └── masks/11/11_01_enhanced.png
 ```
 
 Masks must be binary, with non-zero crack pixels. Do not mix images from the same
 specimen or loading sequence across development and test sets.
+Training expects square image patches and matching masks. The training command
+reads only the categories passed in `--categories`; it does not create a split.
+With a custom dataset, replace those category names with your training folders.
 
 ## Image inference
 
@@ -143,11 +154,23 @@ python scripts/infer_image.py \
   --output outputs/image
 ```
 
-Run on a directory by passing the directory to `--input`. For each image the
-script writes a binary mask, a red overlay, and `inference.json` containing the
-automatically selected prompt information.
+Run recursively over a test directory:
 
-Default prompt parameters reproduce the paper configuration:
+```bash
+python scripts/infer_image.py \
+  --input dataset/test/images \
+  --checkpoint checkpoints/mp_sam2_full.torch \
+  --config configs/prompt.yaml \
+  --output outputs/images
+```
+
+For each image the script preserves the relative category directory and writes
+`<name>_mask.png` and `<name>_overlay.png`. `inference.json` contains automatically
+selected prompt information. For example, `11/11_01.png` produces
+`outputs/images/11/11_01_mask.png`.
+
+`configs/prompt.yaml` is loaded by both inference scripts. Image command-line
+prompt options override the corresponding YAML values. Default settings are:
 
 - threshold offset: 0;
 - SP-Box expansion ratio: 0.10;
@@ -171,6 +194,7 @@ python scripts/infer_video.py \
   --video path/to/input.mp4 \
   --base-checkpoint checkpoints/sam2.1_hiera_large.pt \
   --checkpoint checkpoints/mp_sam2_full.torch \
+  --config configs/prompt.yaml \
   --output outputs/video_overlay.mp4 \
   --contrast 1.0
 ```
@@ -182,32 +206,32 @@ value is applied to every frame and does not use annotations.
 
 ## Training
 
-Few-shot subsets are selected deterministically and balanced across the specified
-categories. For example, the 5-image seed-42 run is:
+Few-shot subsets are balanced across the specified training categories.
+For example, train a 5-image model with:
 
 ```bash
 python scripts/train.py \
-  --images dataset/images \
-  --masks dataset/masks \
+  --images dataset/train/images \
+  --masks dataset/train/masks \
   --categories 01 02 \
   --budget 5 \
-  --seed 42 \
+  --config configs/fewshot.yaml \
   --epochs 80 \
   --batch-size 2 \
   --base-checkpoint checkpoints/sam2.1_hiera_large.pt \
-  --output runs/mp_sam2_5_seed42.torch
+  --output runs/mp_sam2_5.torch
 ```
 
-Change `--budget` to `10` or `50` for the other released few-shot checkpoints.
+Change `--budget` to `10`, `20`, or `50` for other few-shot budgets.
 To train on all valid pairs with the original 3,000/4,000/3,000-stage schedule:
 
 ```bash
 python scripts/train.py \
-  --images dataset/images \
-  --masks dataset/masks \
+  --images dataset/train/images \
+  --masks dataset/train/masks \
   --categories 01 02 \
   --budget full \
-  --seed 42 \
+  --config configs/full.yaml \
   --base-checkpoint checkpoints/sam2.1_hiera_large.pt \
   --full-stage-steps 3000 4000 3000 \
   --output runs/mp_sam2_full.torch
@@ -217,26 +241,39 @@ The three stages train (1) the prompt encoder and mask decoder, (2) those module
 plus image-encoder blocks 30–31 and the neck, and (3) the full model. The hybrid
 loss is `BCE + 2×Dice + Focal + 1.5×IoU`.
 
+Without `--config`, `train.py` selects `configs/full.yaml` for `--budget full`
+and `configs/fewshot.yaml` for a numeric budget. YAML settings control the model,
+optimizer parameters, stage schedule, selected encoder blocks, loss weights,
+and training point sampling. Explicit command-line options override YAML values.
+Unknown YAML keys raise an error. The optimizer supported by this trainer is
+AdamW. Few-shot schedules use equivalent epochs; full-data schedules use stage
+iteration counts.
+
 ## Evaluation
 
 ```bash
 python scripts/evaluate.py \
-  --predictions outputs/image \
-  --masks path/to/test/masks \
+  --predictions outputs/images \
+  --masks dataset/test/masks \
   --output outputs/test_metrics.json
 ```
 
 Accuracy, precision, recall, F1, IoU, and Dice are first calculated per image and
 then averaged, matching the image-level reporting protocol.
+The evaluator matches nested category paths and ignores overlay images. It also
+writes per-image metrics to a CSV next to the JSON summary. Metric values are
+fractions in `[0, 1]`; multiply by 100 to express them as percentages.
 
-## Reproducibility notes
+## Training settings
 
 - Input image patches are resized to 1024 × 1024 by the SAM2 transform.
 - Few-shot experiments use 80 equivalent epochs and stage ratios 30%/40%/30%.
 - Optimizer: AdamW, learning rate `1e-5`, weight decay `0.01`, batch size `2`.
-- Few-shot seeds: `42`, `123`, and `2026`.
 - The fixed test set is never used for subset selection or model training.
-- The repository contains no raw image data, video data, or human annotations.
+- The release includes the method code, runtime model configurations, training
+  settings, inference/evaluation tools, and trained model weights.
+- Raw images, videos, annotations, experiment logs, intermediate checkpoints,
+  and unrelated baseline workspaces are not included.
 
 ## License and acknowledgment
 
@@ -247,5 +284,6 @@ third-party notices in [`sam2/licenses/`](sam2/licenses/).
 
 ## Citation
 
-The final bibliographic record will be added after publication. Until then,
-please cite the manuscript title shown at the top of this README.
+Use the repository's [citation metadata](CITATION.cff) to cite this code release.
+The associated method is described in the manuscript named at the top of this
+README; an article DOI is not specified here until the final record is available.

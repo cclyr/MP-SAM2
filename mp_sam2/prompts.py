@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import dataclasses
-import random
 from contextlib import nullcontext
+from pathlib import Path
 from typing import Any
 
 import cv2
 import numpy as np
 import torch
+
+from .config import load_config
 
 
 @dataclasses.dataclass(frozen=True)
@@ -22,6 +24,13 @@ class PromptConfig:
     score_weight: float = 0.5
     dynamic_mask_only: bool = True
     prediction_threshold: float = 0.5
+
+
+def load_prompt_config(path: str | Path | None = None, **overrides) -> PromptConfig:
+    fields = {field.name for field in dataclasses.fields(PromptConfig)}
+    settings = load_config(path, fields)
+    settings.update({key: value for key, value in overrides.items() if value is not None})
+    return PromptConfig(**settings)
 
 
 def threshold_prior(image_rgb: np.ndarray, offset: int = 0) -> tuple[np.ndarray, int]:
@@ -47,6 +56,8 @@ def _quality(mask: np.ndarray) -> bool:
 
 
 def _spaced_maxima(score: np.ndarray, support: np.ndarray, count: int, gap: int) -> list[tuple[int, int]]:
+    if count <= 0:
+        return []
     height, width = support.shape
     output: list[tuple[int, int]] = []
     for flat in np.argsort(score.ravel())[::-1]:

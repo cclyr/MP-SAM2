@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from .modeling import load_image_predictor, load_video_predictor
-from .prompts import segment_image
+from .prompts import PromptConfig, segment_image
 
 
 def _contrast(image: np.ndarray, factor: float) -> np.ndarray:
@@ -24,6 +24,8 @@ def segment_video(
     contrast: float = 1.0,
     max_frames: int | None = None,
     device: str = "cuda",
+    prompt_config: PromptConfig | None = None,
+    model_config: str = "sam2_hiera_l.yaml",
 ) -> dict:
     """Automatic first-frame MP-SAM2 initialization followed by SAM2 memory propagation."""
     video_path = Path(video_path)
@@ -54,13 +56,13 @@ def segment_video(
 
         first_bgr = cv2.imread(str(frames[0]))
         first_rgb = cv2.cvtColor(first_bgr, cv2.COLOR_BGR2RGB)
-        image_predictor = load_image_predictor(finetuned_checkpoint, device=device)
-        initial_mask, initial_metadata = segment_image(image_predictor, first_rgb)
+        image_predictor = load_image_predictor(finetuned_checkpoint, model_config=model_config, device=device)
+        initial_mask, initial_metadata = segment_image(image_predictor, first_rgb, prompt_config)
         del image_predictor
         torch.cuda.empty_cache()
 
         video_predictor = load_video_predictor(
-            base_checkpoint, finetuned_checkpoint, device=device
+            base_checkpoint, finetuned_checkpoint, model_config=model_config, device=device
         )
         import sam2.modeling.sam.transformer as transformer
 
@@ -88,6 +90,8 @@ def segment_video(
 
         height, width = first_bgr.shape[:2]
         writer = cv2.VideoWriter(str(output_path), cv2.VideoWriter_fourcc(*"mp4v"), fps, (width, height))
+        if not writer.isOpened():
+            raise RuntimeError(f"Unable to create output video: {output_path}")
         mask_dir = output_path.parent / f"{output_path.stem}_masks"
         mask_dir.mkdir(parents=True, exist_ok=True)
         for index, (frame_path, mask) in enumerate(zip(frames, predictions)):

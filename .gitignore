@@ -8,6 +8,11 @@ dist/
 .idea/
 .vscode/
 .DS_Store
+.env
+.env.*
+*.log
+.cache/
+tmp/
 
 # Data and generated outputs are intentionally excluded.
 data/*

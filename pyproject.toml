@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mp-sam2"
-version = "1.0.0"
+version = "1.0.1"
 description = "Multi-prompt transfer learning with SAM2 for ECC microcrack segmentation"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "Apache-2.0"}
 authors = [
   {name = "Yanhui Chen"},
@@ -22,6 +22,8 @@ authors = [
   {name = "Yongchang Guo"},
 ]
 dependencies = [
+  "torch>=2.3.1",
+  "torchvision>=0.18.1",
   "numpy>=1.24,<2",
   "opencv-python>=4.7,<4.12",
   "pillow>=9.4",
@@ -38,4 +40,5 @@ Repository = "https://github.com/cclyr/MP-SAM2"
 include = ["mp_sam2*", "sam2*"]
 
 [tool.setuptools.package-data]
+"sam2" = ["licenses/*", "csrc/*.cu"]
 "sam2.configs" = ["*.yaml"]

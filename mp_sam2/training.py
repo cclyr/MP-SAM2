@@ -22,6 +22,15 @@ from .data import CrackDataset, Sample
 class HybridLoss(nn.Module):
     """BCE + 2*Dice + Focal + 1.5*IoU, as used in MP-SAM2."""
 
+    def __init__(self, weights: dict[str, float] | None = None) -> None:
+        super().__init__()
+        self.weights = {"bce": 1.0, "dice": 2.0, "focal": 1.0, "iou": 1.5}
+        if weights is not None:
+            unknown = set(weights) - set(self.weights)
+            if unknown:
+                raise ValueError(f"Unknown loss weights: {sorted(unknown)}")
+            self.weights.update(weights)
+
     def forward(self, logits: torch.Tensor, target: torch.Tensor) -> tuple[torch.Tensor, dict[str, float]]:
         probability = torch.sigmoid(logits)
         flat_p = probability.flatten()
@@ -34,7 +43,8 @@ class HybridLoss(nn.Module):
         bce_map = F.binary_cross_entropy_with_logits(logits, target, reduction="none")
         focal = ((1 - torch.exp(-bce_map)) ** 2 * bce_map).mean()
         bce = bce_map.mean()
-        total = bce + 2 * dice + focal + 1.5 * iou
+        components = {"bce": bce, "dice": dice, "focal": focal, "iou": iou}
+        total = sum(self.weights[name] * value for name, value in components.items())
         return total, {
             "total": float(total.detach()),
             "bce": float(bce.detach()),
@@ -54,15 +64,23 @@ def set_seed(seed: int) -> None:
     torch.backends.cudnn.deterministic = True
 
 
-def configure_stage(model: nn.Module, stage: str) -> int:
+def configure_stage(
+    model: nn.Module,
+    stage: str,
+    partial_encoder_blocks: Sequence[int] = (30, 31),
+    partial_encoder_neck: bool = True,
+) -> int:
     if stage == "decoder_only":
         for name, parameter in model.named_parameters():
             parameter.requires_grad = "image_encoder" not in name
     elif stage == "partial_encoder":
+        tokens = [f"blocks.{index}." for index in partial_encoder_blocks]
+        if partial_encoder_neck:
+            tokens.append("neck.")
         for name, parameter in model.named_parameters():
             parameter.requires_grad = (
                 "image_encoder" not in name
-                or any(token in name for token in ("blocks.30", "blocks.31", "neck"))
+                or any(token in name for token in tokens)
             )
     elif stage == "full_finetune":
         for parameter in model.parameters():
@@ -72,10 +90,15 @@ def configure_stage(model: nn.Module, stage: str) -> int:
     return sum(parameter.numel() for parameter in model.parameters() if parameter.requires_grad)
 
 
-def split_steps(sample_count: int, batch_size: int, epochs: int) -> list[int]:
+def split_steps(
+    sample_count: int, batch_size: int, epochs: int,
+    ratios: Sequence[float] = (0.30, 0.40, 0.30),
+) -> list[int]:
+    if len(ratios) != 3 or any(value <= 0 for value in ratios) or not math.isclose(sum(ratios), 1.0):
+        raise ValueError("stage_ratio must contain three positive values summing to 1")
     total = max(3, math.ceil(sample_count / batch_size) * epochs)
-    first = max(1, round(total * 0.30))
-    second = max(1, round(total * 0.40))
+    first = min(max(1, round(total * ratios[0])), total - 2)
+    second = min(max(1, round(total * ratios[1])), total - first - 1)
     return [first, second, total - first - second]
 
 
@@ -84,6 +107,8 @@ def _load_base(checkpoint: Path, model_config: str, device: str) -> SAM2ImagePre
     payload = torch.load(checkpoint, map_location=device, weights_only=False)
     state = payload["model"] if isinstance(payload, dict) and "model" in payload else payload
     current = model.state_dict()
+    # Released MP-SAM2 weights use the bundled legacy Hiera-L runtime. Transfer
+    # matching SAM2.1 tensors, excluding its additional spatial/pointer heads.
     compatible = {k: v for k, v in state.items() if k in current and current[k].shape == v.shape}
     missing, unexpected = model.load_state_dict(compatible, strict=False)
     if missing or unexpected:
@@ -112,25 +137,43 @@ def train(
     learning_rate: float = 1e-5,
     weight_decay: float = 0.01,
     stage_steps: Sequence[int] | None = None,
+    stage_ratio: Sequence[float] = (0.30, 0.40, 0.30),
+    input_size: int = 1024,
+    training_points: int = 64,
+    negative_point_ratio: float = 0.10,
+    partial_encoder_blocks: Sequence[int] = (30, 31),
+    partial_encoder_neck: bool = True,
+    loss_weights: dict[str, float] | None = None,
     device: str = "cuda",
 ) -> dict:
     """Run the three-stage progressive fine-tuning protocol."""
+    if batch_size <= 0 or epochs <= 0:
+        raise ValueError("batch_size and epochs must be positive")
+    if training_points <= 0 or not 0 <= negative_point_ratio < 1:
+        raise ValueError("training_points must be positive and negative_point_ratio must be in [0, 1)")
     set_seed(seed)
     base_checkpoint = Path(base_checkpoint)
     output_checkpoint = Path(output_checkpoint)
     output_checkpoint.parent.mkdir(parents=True, exist_ok=True)
     predictor = _load_base(base_checkpoint, model_config, device)
-    dataset = CrackDataset(samples, image_size=1024, points_per_sample=64, negative_ratio=0.10)
+    if input_size != predictor.model.image_size:
+        raise ValueError("input_size must match image_size in the selected SAM2 model configuration")
+    dataset = CrackDataset(
+        samples, image_size=input_size, points_per_sample=training_points,
+        negative_ratio=negative_point_ratio,
+    )
     optimizer = torch.optim.AdamW(predictor.model.parameters(), lr=learning_rate, weight_decay=weight_decay)
     scaler = torch.cuda.amp.GradScaler(enabled=device.startswith("cuda"))
-    criterion = HybridLoss()
+    criterion = HybridLoss(loss_weights)
     stages = ("decoder_only", "partial_encoder", "full_finetune")
-    steps = list(stage_steps) if stage_steps else split_steps(len(samples), batch_size, epochs)
+    steps = list(stage_steps) if stage_steps is not None else split_steps(len(samples), batch_size, epochs, stage_ratio)
+    if len(steps) != 3 or any(int(count) <= 0 for count in steps):
+        raise ValueError("stage_steps must contain three positive iteration counts")
     history = []
     started = time.time()
 
     for stage, count in zip(stages, steps):
-        trainable = configure_stage(predictor.model, stage)
+        trainable = configure_stage(predictor.model, stage, partial_encoder_blocks, partial_encoder_neck)
         predictor.model.train()
         last = {}
         stage_started = time.time()
@@ -171,6 +214,8 @@ def train(
 
     metadata = {
         "architecture": "SAM2 Hiera Large",
+        "model_config": model_config,
+        "input_size": input_size,
         "seed": seed,
         "training_images": len(samples),
         "epochs_equivalent": epochs,
@@ -178,7 +223,11 @@ def train(
         "learning_rate": learning_rate,
         "weight_decay": weight_decay,
         "stage_steps": dict(zip(stages, steps)),
-        "loss_weights": {"bce": 1.0, "dice": 2.0, "focal": 1.0, "iou": 1.5},
+        "loss_weights": criterion.weights,
+        "training_points": training_points,
+        "negative_point_ratio": negative_point_ratio,
+        "partial_encoder_blocks": list(partial_encoder_blocks),
+        "partial_encoder_neck": partial_encoder_neck,
         "history": history,
         "duration_seconds": time.time() - started,
     }
